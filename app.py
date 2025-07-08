@@ -148,14 +148,20 @@ Return as JSON:
 
 def title_script_generator(category, subcategory, emotion, article_text, content_language="English", character_sketch=None):
     if not character_sketch:
-        character_sketch = "Polaris is a sincere and articulate Hindi-English news anchor..."
+        character_sketch = f"Polaris is a sincere and articulate {content_language} news anchor..."
 
-    system_prompt = """
-You are a digital content editor.
-
-Create a structured 5-slide web story from the article below. Each slide must contain:
-- A short English title (for the slide)
-- A prompt: a clear instruction telling another GPT model what narration to write (don't write the narration here)
+     system_prompt = f"""
+    You are a digital content editor.
+    
+    Create a structured 5-slide web story from the article below.
+    
+    Language: {content_language}
+    
+    Each slide must contain:
+    - A short title in {content_language}
+    {"- The title must be written in Hindi (Devanagari script)." if content_language == "Hindi" else ""}
+    - A narration prompt (instruction only, don't write narration)
+    {"- The narration prompt must also be in Hindi (Devanagari script)." if content_language == "Hindi" else ""}
 
 Format:
 {
@@ -203,8 +209,9 @@ Article:
     }]
 
     for slide in slides_raw:
+        script_language = f"{content_language} (use Devanagari script)" if content_language == "Hindi" else content_language
         narration_prompt = f"""
-            Write a narration in **{content_language}** (max 200 characters, including spaces/punctuation),
+            Write a narration in **{script_language}** (max 200 characters, including spaces/punctuation),
             in the voice of Polaris.
         
             Instruction: {slide['prompt']}
@@ -213,8 +220,7 @@ Article:
             Character sketch:
             {character_sketch}
         """
-
-
+        
         narration_response = client.chat.completions.create(
             model="gpt-4",
             messages=[
