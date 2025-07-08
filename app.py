@@ -199,7 +199,21 @@ Article:
         article_text = "This article content could not be extracted properly."
     
     headline = article_text.split("\n")[0].strip().replace('"', '')
-    slide1_script = f"Namaskar doston, main hoon Polaris. Aaj ki badi khabar: {headline}"
+
+    if content_language == "Hindi":
+    # Ask GPT to transliterate into Devanagari
+        prompt = f"Transliterate the following Hindi sentence written in Latin script into Hindi Devanagari script:\n\nNamaskar doston, main hoon Polaris. Aaj ki badi khabar: {headline}"
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You are a Hindi transliteration expert."},
+                {"role": "user", "content": prompt}
+            ]
+        )
+        slide1_script = response.choices[0].message.content.strip()
+    else:
+        slide1_script = f"Hello friends, I’m Polaris. Today’s big headline: {headline}"
+
 
     slides = [{
         "title": headline[:80],
@@ -496,7 +510,6 @@ st.title("🧠 Web Story Content Generator")
 
 tab1, tab2, tab3 ,tab4 ,tab5 ,tab6  = st.tabs(["📝 Slide Prompt Generator", "🔊 TTS Audio Generator", "Stoytitle/Hookline Insertor","🎞️ AMP Generator","Generate JSON", "Storyboard" ])
 
-
 with tab1:
     st.title("🧠 Generalized Web Story Prompt Generator")
     url = st.text_input("Enter a news article URL")
@@ -517,9 +530,8 @@ with tab1:
                     category, subcategory, emotion = result["category"], result["subcategory"], result["emotion"]
                     
                     hookline = generate_hookline(title, summary)
-                    
                     output = title_script_generator(category, subcategory, emotion, full_text, content_language)
-                    
+
                     final_output = {
                         "title": title,
                         "summary": summary,
@@ -529,27 +541,48 @@ with tab1:
                         "subcategory": subcategory,
                         "persona": persona,
                         "slides": output.get("slides", []),
-                        "storytitle": title.strip(),  # ✅ storytitle added here
-                        "hookline": hookline  # ✅ hookline added
+                        "storytitle": title.strip(),
+                        "hookline": hookline
                     }
-    
-                    # ✅ Include all metadata and storytitle in the final output JSON
+
                     structured_output = OrderedDict()
                     structured_output["storytitle"] = title.strip()
-                    
-                    # Add s1paragraph1 to s6paragraph1 in order
-                    for i in range(1,number+1):
+
+                    # Add s1paragraph1 to sXparagraph1
+                    for i in range(1, number + 1):
                         key = f"s{i}paragraph1"
                         structured_output[key] = restructure_slide_output(final_output).get(key, "")
 
                     structured_output["hookline"] = hookline
-        
+
+                    # 🔁 If Hindi is selected → Transliterate using GPT
+                    if content_language == "Hindi":
+                        def transliterate_to_devanagari(json_data):
+                            updated = {}
+                            for k, v in json_data.items():
+                                if k.startswith("s") and "paragraph1" in k:
+                                    prompt = f"""Transliterate this Hindi sentence (written in Latin script) into Hindi Devanagari script. Return only the transliterated text:\n\n{v}"""
+                                    response = client.chat.completions.create(
+                                        model="gpt-4",
+                                        messages=[
+                                            {"role": "system", "content": "You are a Hindi transliteration expert."},
+                                            {"role": "user", "content": prompt}
+                                        ]
+                                    )
+                                    updated[k] = response.choices[0].message.content.strip()
+                                else:
+                                    updated[k] = v
+                            return updated
+
+                        structured_output = transliterate_to_devanagari(structured_output)
+
+                    # ✅ Save & Download
                     timestamp = int(time.time())
                     filename = f"structured_slides_{timestamp}.json"
-    
+
                     with open(filename, "w", encoding="utf-8") as f:
                         json.dump(structured_output, f, indent=2, ensure_ascii=False)
-    
+
                     with open(filename, "r", encoding="utf-8") as f:
                         st.success("✅ Prompt generation complete!! Click below to download:")
                         st.download_button(
@@ -562,6 +595,7 @@ with tab1:
                     st.error(f"❌ Error: {str(e)}")
         else:
             st.warning("Please enter a valid URL and choose a persona.")
+
 
 
 
