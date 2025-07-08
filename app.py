@@ -159,9 +159,9 @@ def title_script_generator(category, subcategory, emotion, article_text, content
     
     Each slide must contain:
     - A short title in {content_language}
-    {"- The title must be written in Hindi (Devanagari script)." if content_language == "Hindi" else ""}
+    {"- The title must be written in Hindi language" if content_language == "Hindi" else ""}
     - A narration prompt (instruction only, don't write narration)
-    {"- The narration prompt must also be in Hindi (Devanagari script)." if content_language == "Hindi" else ""}
+    {"- The narration prompt must also be in Hindi language" if content_language == "Hindi" else ""}
 
 Format:
 {
@@ -202,11 +202,11 @@ Article:
 
     if content_language == "Hindi":
     # Ask GPT to transliterate into Devanagari
-        prompt = f"Transliterate the following Hindi sentence written in Latin script into Hindi Devanagari script:\n\nNamaskar doston, main hoon Polaris. Aaj ki badi khabar: {headline}"
+        prompt = f"Generate the news content in Hindi language {headline}"
         response = client.chat.completions.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "You are a Hindi transliteration expert."},
+                {"role": "system", "content": "You are a Hindi news anchor."},
                 {"role": "user", "content": prompt}
             ]
         )
