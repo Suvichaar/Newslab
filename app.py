@@ -363,7 +363,7 @@ def generate_hookline(title, summary, content_language="English"):
     # Prepare prompt based on language
     if content_language == "Hindi":
         prompt = f"""
-आप एक सोशल मीडिया रणनीतिकार हैं। आपका कार्य है एक संक्षिप्त, ध्यान खींचने वाली *हुकलाइन* बनाना जो इस समाचार की ओर पाठक का ध्यान आकर्षित करे।
+आप 'पोलारिस' नामक एक सोशल मीडिया रणनीतिकार हैं और चैनल 'सुविचार' के लिए कार्य करते हैं। आपका कार्य है एक संक्षिप्त, ध्यान खींचने वाली *हुकलाइन* बनाना जो इस समाचार की ओर दर्शकों का ध्यान आकर्षित करे।
 
 शीर्षक: {title}
 सारांश: {summary}
@@ -375,17 +375,17 @@ def generate_hookline(title, summary, content_language="English"):
 - हैशटैग, इमोजी या अधिक विराम चिह्न न हो
 - भाषा सरल और भावनात्मक रूप से आकर्षक हो
 - 120 वर्णों से कम होनी चाहिए
-- उद्धरण (" ") शामिल न करें
+- उद्धरण ("") शामिल न करें
 
 उदाहरण:
-- "सरकार का यह कदम सबको चौंका देगा।"
-- "भारत का अंतरिक्ष में साहसिक कदम।"
+- सरकार का यह कदम सबको चौंका देगा।
+- भारत का अंतरिक्ष में साहसिक कदम।
 
-अब कृपया हुकलाइन दीजिए:
+अब कृपया पोलारिस की आवाज़ में हुकलाइन दीजिए:
 """
     else:
         prompt = f"""
-You are a social media strategist. Your job is to create a short, attention-grabbing *hookline* for a news story.
+You are Polaris, a social media strategist for the news channel 'Suvichaar'. Your job is to create a short, attention-grabbing *hookline* for a news story.
 
 Title: {title}
 Summary: {summary}
@@ -403,7 +403,7 @@ Example formats:
 - What happened next will shock you.
 - India's bold step in space tech.
 
-Now generate the hookline:
+Now generate the hookline in Polaris' tone:
 """
 
     try:
@@ -419,6 +419,7 @@ Now generate the hookline:
     except Exception as e:
         print(f"❌ Hookline generation failed: {e}")
         return "यह खबर आपको चौंका सकती है!" if content_language == "Hindi" else "This story might surprise you!"
+
 
 
 
