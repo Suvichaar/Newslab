@@ -78,27 +78,40 @@ def generate_slug_and_urls(title):
 # === Utility Functions ===
 def extract_article(url):
     import newspaper
-    article = newspaper.Article(url)
-    article.download()
-    article.parse()
+    from newspaper import Article
 
     try:
-        article.nlp()
-    except:
-        pass
+        article = Article(url)
+        article.download()
+        article.parse()
 
-    # Fallbacks for missing fields
-    title = article.title if article.title else "Untitled Article"
-    text = article.text if article.text else "No article content available."
-    summary = article.summary if article.summary else text[:300]
+        try:
+            article.nlp()
+        except:
+            pass  # Some articles may not support NLP extraction
 
-    # Final strip to ensure clean outputs
-    return title.strip(), summary.strip(), text.strip()
+        # Fallbacks for missing fields
+        title = article.title or "Untitled Article"
+        text = article.text or "No article content available."
+        summary = article.summary or text[:300]
+
+        return title.strip(), summary.strip(), text.strip()
+
+    except Exception as e:
+        st.error(f"❌ Failed to extract article from URL. Error: {str(e)}")
+        return "Untitled Article", "No summary available.", "No article content available."
 
 
 def get_sentiment(text):
     from textblob import TextBlob
-    polarity = TextBlob(text).sentiment.polarity
+
+    if not text or not text.strip():
+        return "neutral"  # default for empty input
+
+    # Clean and analyze
+    clean_text = text.strip().replace("\n", " ")
+    polarity = TextBlob(clean_text).sentiment.polarity
+
     if polarity > 0.2:
         return "positive"
     elif polarity < -0.2:
@@ -107,6 +120,15 @@ def get_sentiment(text):
         return "neutral"
 
 def detect_category_and_subcategory(text):
+    import json
+
+    if not text or len(text.strip()) < 50:
+        return {
+            "category": "Unknown",
+            "subcategory": "General",
+            "emotion": "Neutral"
+        }
+
     prompt = f"""
 You are an expert news analyst.
 
@@ -126,51 +148,65 @@ Return as JSON:
   "emotion": "..."
 }}
 """
-    response = client.chat.completions.create(
-        model="gpt-4",
-        messages=[
-            {"role": "system", "content": "Classify article into category, subcategory, and emotion."},
-            {"role": "user", "content": prompt.strip()}
-        ]
-    )
-
-    content = response.choices[0].message.content.strip()
-    content = content.strip("```json").strip("```").strip()
 
     try:
-        return json.loads(content)
-    except:
-        return {
-            "category": "Unknown",
-            "subcategory": "General",
-            "emotion": "Neutral"
-        }
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "Classify article into category, subcategory, and emotion."},
+                {"role": "user", "content": prompt.strip()}
+            ],
+            max_tokens=150
+        )
+
+        content = response.choices[0].message.content.strip()
+        content = content.strip("```json").strip("```").strip()
+
+        result = json.loads(content)
+
+        # Validate required keys
+        if all(k in result for k in ["category", "subcategory", "emotion"]):
+            return result
+
+    except Exception as e:
+        print("Category detection failed:", e)
+
+    return {
+        "category": "Unknown",
+        "subcategory": "General",
+        "emotion": "Neutral"
+    }
 
 def title_script_generator(category, subcategory, emotion, article_text, content_language="English", character_sketch=None):
     if not character_sketch:
-        character_sketch = f"Polaris is a sincere and articulate {content_language} news anchor..."
+        character_sketch = (
+            f"Polaris is a sincere and articulate {content_language} news anchor. "
+            "They present facts clearly, concisely, and warmly, connecting deeply with their audience."
+        )
 
-     system_prompt = f"""
-    You are a digital content editor.
-    
-    Create a structured 5-slide web story from the article below.
-    
-    Language: {content_language}
-    
-    Each slide must contain:
-    - A short title in {content_language}
-    {"- The title must be written in Hindi language" if content_language == "Hindi" else ""}
-    - A narration prompt (instruction only, don't write narration)
-    {"- The narration prompt must also be in Hindi language" if content_language == "Hindi" else ""}
+    # 🔹 Prompt to generate slides (excluding slide 1 narration)
+    system_prompt = f"""
+You are a digital content editor.
+
+Create a structured 5-slide web story from the article below.
+
+Language: {content_language}
+
+Each slide must contain:
+- A short title in {content_language}
+{"- The title must be written in Hindi (Devanagari script)." if content_language == "Hindi" else ""}
+- A narration prompt (instruction only, don't write narration)
+{"- The narration prompt must also be in Hindi (Devanagari script)." if content_language == "Hindi" else ""}
 
 Format:
-{
+{{
   "slides": [
-    { "title": "...", "prompt": "..." },
+    {{ "title": "...", "prompt": "..." }},
     ...
   ]
-}
+}}
 """
+
     user_prompt = f"""
 Category: {category}
 Subcategory: {subcategory}
@@ -179,6 +215,7 @@ Emotion: {emotion}
 Article:
 \"\"\"{article_text[:3000]}\"\"\"
 """
+
     response = client.chat.completions.create(
         model="gpt-4",
         messages=[
@@ -195,25 +232,22 @@ Article:
     except:
         return {"category": category, "subcategory": subcategory, "emotion": emotion, "slides": []}
 
-    if not article_text:
-        article_text = "This article content could not be extracted properly."
-    
+    # 🔹 Generate Slide 1 Intro Narration
     headline = article_text.split("\n")[0].strip().replace('"', '')
 
     if content_language == "Hindi":
-    # Ask GPT to transliterate into Devanagari
-        prompt = f"Generate the news content in Hindi language {headline}"
-        response = client.chat.completions.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": "You are a Hindi news anchor."},
-                {"role": "user", "content": prompt}
-            ]
-        )
-        slide1_script = response.choices[0].message.content.strip()
+        slide1_prompt = f"Generate a greeting and news headline narration in Hindi for the story: {headline}"
     else:
-        slide1_script = f"Hello friends, I’m Polaris. Today’s big headline: {headline}"
+        slide1_prompt = f"Generate a greeting and headline intro narration in English for: {headline}"
 
+    slide1_response = client.chat.completions.create(
+        model="gpt-4",
+        messages=[
+            {"role": "system", "content": "You are a news presenter generating opening lines."},
+            {"role": "user", "content": slide1_prompt}
+        ]
+    )
+    slide1_script = slide1_response.choices[0].message.content.strip()
 
     slides = [{
         "title": headline[:80],
@@ -222,27 +256,32 @@ Article:
         "script": slide1_script
     }]
 
+    # 🔹 Generate narration for each slide
     for slide in slides_raw:
         script_language = f"{content_language} (use Devanagari script)" if content_language == "Hindi" else content_language
         narration_prompt = f"""
-            Write a narration in **{script_language}** (max 200 characters, including spaces/punctuation),
-            in the voice of Polaris.
-        
-            Instruction: {slide['prompt']}
-            Tone: Warm, simple, clear. No self-intro.
-        
-            Character sketch:
-            {character_sketch}
-        """
-        
-        narration_response = client.chat.completions.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": "You write news narration in Hindi-English mix."},
-                {"role": "user", "content": narration_prompt.strip()}
-            ]
-        )
-        narration = narration_response.choices[0].message.content.strip()
+Write a narration in **{script_language}** (max 200 characters),
+in the voice of Polaris.
+
+Instruction: {slide['prompt']}
+Tone: Warm, clear, informative. No self-intro.
+
+Character sketch:
+{character_sketch}
+"""
+
+        try:
+            narration_response = client.chat.completions.create(
+                model="gpt-4",
+                messages=[
+                    {"role": "system", "content": "You write concise narrations for web story slides."},
+                    {"role": "user", "content": narration_prompt.strip()}
+                ]
+            )
+            narration = narration_response.choices[0].message.content.strip()
+        except:
+            narration = "Unable to generate narration for this slide."
+
         slides.append({
             "title": slide['title'],
             "prompt": slide['prompt'],
@@ -256,6 +295,8 @@ Article:
         "emotion": emotion,
         "slides": slides
     }
+
+
 
 def modify_tab4_json(original_json):
     updated_json = OrderedDict()
@@ -295,42 +336,61 @@ def replace_placeholders_in_html(html_text, json_data):
 
     return html_text
 
-# Tab 4 layout
-def generate_hookline(title, summary):
+# Tab 4 layout // Hookline modified 
+def generate_hookline(title, summary, content_language="English"):
     prompt = f"""
                 You are a social media strategist. Your job is to create a short, attention-grabbing *hookline* for a news story.
                 
                 Title: {title}
                 Summary: {summary}
                 
+                Language: {content_language}
+                
                 Requirements:
                 - One sentence only
-                - Avoid hashtags or emojis
+                - Avoid hashtags, emojis, and excessive punctuation
                 - Use simple and emotionally engaging language
+                - Must be under 120 characters
+                - Do not include quotes in output
                 
                 Example formats:
                 - "What happened next will shock you."
                 - "India's bold step in space tech."
                 
                 Now generate the hookline:
-                """
-    response = client.chat.completions.create(
-        model="gpt-4",
-        messages=[
-            {"role": "system", "content": "You create viral hooklines for news stories."},
-            {"role": "user", "content": prompt.strip()}
-        ]
-    )
+            """
 
-    return response.choices[0].message.content.strip().replace('"', '')
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You create viral hooklines for news stories."},
+                {"role": "user", "content": prompt.strip()}
+            ]
+        )
+
+        return response.choices[0].message.content.strip().strip('"')
+
+    except Exception as e:
+        print(f"❌ Hookline generation failed: {e}")
+        return "This story might surprise you!"
 
 
 def restructure_slide_output(final_output):
     slides = final_output.get("slides", [])
     structured = {}
+
     for idx, slide in enumerate(slides):
         key = f"s{idx + 1}paragraph1"
-        structured[key] = slide.get("script", "").strip()
+        script = slide.get("script", "").strip()
+
+        # Safety net: If empty script, fall back to title or prompt
+        if not script:
+            fallback = slide.get("title") or slide.get("prompt") or "Content unavailable"
+            script = fallback.strip()
+
+        structured[key] = script
+
     return structured
 
 def generate_remotion_input(tts_output: dict, fixed_image_url: str, author_name: str = "Suvichaar"):
@@ -507,20 +567,30 @@ def synthesize_and_upload(paragraphs, voice):
 
 def transliterate_to_devanagari(json_data):
     updated = {}
+
     for k, v in json_data.items():
-        if k.startswith("s") and "paragraph1" in k:
+        # Only transliterate slide paragraphs
+        if k.startswith("s") and "paragraph1" in k and v.strip():
             prompt = f"""Transliterate this Hindi sentence (written in Latin script) into Hindi Devanagari script. Return only the transliterated text:\n\n{v}"""
-            response = client.chat.completions.create(
-                model="gpt-4",
-                messages=[
-                    {"role": "system", "content": "You are a Hindi transliteration expert."},
-                    {"role": "user", "content": prompt}
-                ]
-            )
-            updated[k] = response.choices[0].message.content.strip()
+            
+            try:
+                response = client.chat.completions.create(
+                    model="gpt-4",
+                    messages=[
+                        {"role": "system", "content": "You are a Hindi transliteration expert."},
+                        {"role": "user", "content": prompt.strip()}
+                    ]
+                )
+                devanagari = response.choices[0].message.content.strip()
+                updated[k] = devanagari
+            except Exception as e:
+                # Fallback: use original if error occurs
+                updated[k] = v
         else:
             updated[k] = v
+
     return updated
+
 
 # === Streamlit UI ===
 st.title("🧠 Web Story Content Generator")
