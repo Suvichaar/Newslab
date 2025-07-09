@@ -637,6 +637,39 @@ def transliterate_to_devanagari(json_data):
 
     return updated
 
+def generate_storytitle(title, summary, content_language="English"):
+    if content_language == "Hindi":
+        prompt = f"""
+आप एक समाचार शीर्षक विशेषज्ञ हैं। नीचे दी गई अंग्रेज़ी समाचार शीर्षक और सारांश को पढ़कर, उसी का अर्थ बनाए रखते हुए एक नया आकर्षक **हिंदी शीर्षक** बनाइए।
+
+अंग्रेज़ी शीर्षक: {title}
+सारांश: {summary}
+
+अनुरोध:
+- केवल एक पंक्ति
+- भाषा सरल और स्पष्ट हो
+- भावनात्मक रूप से आकर्षक हो
+- उद्धरण ("") शामिल न करें
+
+अब कृपया हिंदी शीर्षक दीजिए:
+"""
+    else:
+        return title.strip()
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You generate clear and catchy news headlines."},
+                {"role": "user", "content": prompt.strip()}
+            ]
+        )
+        return response.choices[0].message.content.strip().strip('"')
+
+    except Exception as e:
+        print(f"❌ Storytitle generation failed: {e}")
+        return title.strip()
+
 
 # === Streamlit UI ===
 st.title("🧠 Web Story Content Generator")
@@ -672,9 +705,12 @@ with tab1:
                     category = result["category"]
                     subcategory = result["subcategory"]
                     emotion = result["emotion"]
-                    hookline = generate_hookline(title, summary)
 
-                    # Step 6: Generate slide content
+                    # Step 6: Generate hookline and storytitle with language handling
+                    hookline = generate_hookline(title, summary, content_language)
+                    storytitle = generate_storytitle(title, summary, content_language)
+
+                    # Step 7: Generate slide content
                     output = title_script_generator(
                         category, subcategory, emotion, full_text, content_language
                     )
@@ -688,13 +724,13 @@ with tab1:
                         "subcategory": subcategory,
                         "persona": persona,
                         "slides": output.get("slides", []),
-                        "storytitle": title.strip(),
+                        "storytitle": storytitle,
                         "hookline": hookline
                     }
 
-                    # Step 7: Flatten into story JSON
+                    # Step 8: Flatten into story JSON
                     structured_output = OrderedDict()
-                    structured_output["storytitle"] = title.strip()
+                    structured_output["storytitle"] = storytitle
 
                     for i in range(1, number + 1):
                         key = f"s{i}paragraph1"
@@ -702,11 +738,11 @@ with tab1:
 
                     structured_output["hookline"] = hookline
 
-                    # Step 8: Hindi transliteration (if needed)
+                    # Step 9: Hindi transliteration (only for paragraphs, not title/hookline)
                     if content_language == "Hindi":
                         structured_output = transliterate_to_devanagari(structured_output)
 
-                    # Step 9: Save + Download JSON
+                    # Step 10: Save + Download JSON
                     timestamp = int(time.time())
                     filename = f"structured_slides_{timestamp}.json"
 
