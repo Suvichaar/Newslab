@@ -119,7 +119,7 @@ def get_sentiment(text):
     else:
         return "neutral"
 
-def detect_category_and_subcategory(text):
+def detect_category_and_subcategory(text, content_language="English"):
     import json
 
     if not text or len(text.strip()) < 50:
@@ -129,7 +129,29 @@ def detect_category_and_subcategory(text):
             "emotion": "Neutral"
         }
 
-    prompt = f"""
+    # Prompt construction based on language
+    if content_language == "Hindi":
+        prompt = f"""
+आप एक समाचार विश्लेषण विशेषज्ञ हैं।
+
+इस समाचार लेख का विश्लेषण करें और नीचे तीन बातें बताएं:
+
+1. category (श्रेणी)
+2. subcategory (उपश्रेणी)
+3. emotion (भावना)
+
+लेख:
+\"\"\"{text[:3000]}\"\"\"
+
+जवाब केवल JSON में दें:
+{{
+  "category": "...",
+  "subcategory": "...",
+  "emotion": "..."
+}}
+"""
+    else:
+        prompt = f"""
 You are an expert news analyst.
 
 Analyze the following news article and return:
@@ -141,7 +163,7 @@ Analyze the following news article and return:
 Article:
 \"\"\"{text[:3000]}\"\"\"
 
-Return as JSON:
+Return ONLY as JSON:
 {{
   "category": "...",
   "subcategory": "...",
@@ -153,7 +175,7 @@ Return as JSON:
         response = client.chat.completions.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "Classify article into category, subcategory, and emotion."},
+                {"role": "system", "content": "Classify the news into category, subcategory, and emotion."},
                 {"role": "user", "content": prompt.strip()}
             ],
             max_tokens=150
@@ -164,18 +186,18 @@ Return as JSON:
 
         result = json.loads(content)
 
-        # Validate required keys
         if all(k in result for k in ["category", "subcategory", "emotion"]):
             return result
 
     except Exception as e:
-        print("Category detection failed:", e)
+        print("❌ Category detection failed:", e)
 
     return {
         "category": "Unknown",
         "subcategory": "General",
         "emotion": "Neutral"
     }
+
 
 def title_script_generator(category, subcategory, emotion, article_text, content_language="English", character_sketch=None):
     if not character_sketch:
@@ -338,27 +360,51 @@ def replace_placeholders_in_html(html_text, json_data):
 
 # Tab 4 layout // Hookline modified 
 def generate_hookline(title, summary, content_language="English"):
-    prompt = f"""
-                You are a social media strategist. Your job is to create a short, attention-grabbing *hookline* for a news story.
-                
-                Title: {title}
-                Summary: {summary}
-                
-                Language: {content_language}
-                
-                Requirements:
-                - One sentence only
-                - Avoid hashtags, emojis, and excessive punctuation
-                - Use simple and emotionally engaging language
-                - Must be under 120 characters
-                - Do not include quotes in output
-                
-                Example formats:
-                - "What happened next will shock you."
-                - "India's bold step in space tech."
-                
-                Now generate the hookline:
-            """
+    # Prepare prompt based on language
+    if content_language == "Hindi":
+        prompt = f"""
+आप एक सोशल मीडिया रणनीतिकार हैं। आपका कार्य है एक संक्षिप्त, ध्यान खींचने वाली *हुकलाइन* बनाना जो इस समाचार की ओर पाठक का ध्यान आकर्षित करे।
+
+शीर्षक: {title}
+सारांश: {summary}
+
+भाषा: हिंदी
+
+अनुरोध:
+- केवल एक वाक्य हो
+- हैशटैग, इमोजी या अधिक विराम चिह्न न हो
+- भाषा सरल और भावनात्मक रूप से आकर्षक हो
+- 120 वर्णों से कम होनी चाहिए
+- उद्धरण (" ") शामिल न करें
+
+उदाहरण:
+- "सरकार का यह कदम सबको चौंका देगा।"
+- "भारत का अंतरिक्ष में साहसिक कदम।"
+
+अब कृपया हुकलाइन दीजिए:
+"""
+    else:
+        prompt = f"""
+You are a social media strategist. Your job is to create a short, attention-grabbing *hookline* for a news story.
+
+Title: {title}
+Summary: {summary}
+
+Language: {content_language}
+
+Requirements:
+- One sentence only
+- Avoid hashtags, emojis, and excessive punctuation
+- Use simple and emotionally engaging language
+- Must be under 120 characters
+- Do not include quotes in output
+
+Example formats:
+- What happened next will shock you.
+- India's bold step in space tech.
+
+Now generate the hookline:
+"""
 
     try:
         response = client.chat.completions.create(
@@ -368,12 +414,12 @@ def generate_hookline(title, summary, content_language="English"):
                 {"role": "user", "content": prompt.strip()}
             ]
         )
-
         return response.choices[0].message.content.strip().strip('"')
 
     except Exception as e:
         print(f"❌ Hookline generation failed: {e}")
-        return "This story might surprise you!"
+        return "यह खबर आपको चौंका सकती है!" if content_language == "Hindi" else "This story might surprise you!"
+
 
 
 def restructure_slide_output(final_output):
