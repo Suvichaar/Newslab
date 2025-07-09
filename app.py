@@ -505,32 +505,63 @@ def synthesize_and_upload(paragraphs, voice):
 
     return result
 
+def transliterate_to_devanagari(json_data):
+    updated = {}
+    for k, v in json_data.items():
+        if k.startswith("s") and "paragraph1" in k:
+            prompt = f"""Transliterate this Hindi sentence (written in Latin script) into Hindi Devanagari script. Return only the transliterated text:\n\n{v}"""
+            response = client.chat.completions.create(
+                model="gpt-4",
+                messages=[
+                    {"role": "system", "content": "You are a Hindi transliteration expert."},
+                    {"role": "user", "content": prompt}
+                ]
+            )
+            updated[k] = response.choices[0].message.content.strip()
+        else:
+            updated[k] = v
+    return updated
+
 # === Streamlit UI ===
 st.title("🧠 Web Story Content Generator")
 
 tab1, tab2, tab3 ,tab4 ,tab5 ,tab6  = st.tabs(["📝 Slide Prompt Generator", "🔊 TTS Audio Generator", "Stoytitle/Hookline Insertor","🎞️ AMP Generator","Generate JSON", "Storyboard" ])
 
+# 🧠 Streamlit UI – Tab 1
 with tab1:
     st.title("🧠 Generalized Web Story Prompt Generator")
+
     url = st.text_input("Enter a news article URL")
     persona = st.selectbox(
         "Choose audience persona:",
         ["genz", "millenial", "working professionals", "creative thinkers", "spiritual explorers"]
     )
     content_language = st.selectbox("Choose content language", ["English", "Hindi"])
-    number = st.number_input("Enter no of slides except (Storytitle and Hookline)", min_value=0, max_value=1000, value=10, step=1)
+    number = st.number_input(
+        "Enter no of slides except (Storytitle and Hookline)",
+        min_value=0,
+        max_value=1000,
+        value=10,
+        step=1
+    )
 
     if st.button("🚀 Submit and Generate JSON"):
         if url and persona:
             with st.spinner("Analyzing the article and generating prompts..."):
                 try:
+                    # Step 1–5: Extract + Analyze
                     title, summary, full_text = extract_article(url)
                     sentiment = get_sentiment(summary or full_text)
                     result = detect_category_and_subcategory(full_text)
-                    category, subcategory, emotion = result["category"], result["subcategory"], result["emotion"]
-                    
+                    category = result["category"]
+                    subcategory = result["subcategory"]
+                    emotion = result["emotion"]
                     hookline = generate_hookline(title, summary)
-                    output = title_script_generator(category, subcategory, emotion, full_text, content_language)
+
+                    # Step 6: Generate slide content
+                    output = title_script_generator(
+                        category, subcategory, emotion, full_text, content_language
+                    )
 
                     final_output = {
                         "title": title,
@@ -545,38 +576,21 @@ with tab1:
                         "hookline": hookline
                     }
 
+                    # Step 7: Flatten into story JSON
                     structured_output = OrderedDict()
                     structured_output["storytitle"] = title.strip()
 
-                    # Add s1paragraph1 to sXparagraph1
                     for i in range(1, number + 1):
                         key = f"s{i}paragraph1"
                         structured_output[key] = restructure_slide_output(final_output).get(key, "")
 
                     structured_output["hookline"] = hookline
 
-                    # 🔁 If Hindi is selected → Transliterate using GPT
+                    # Step 8: Hindi transliteration (if needed)
                     if content_language == "Hindi":
-                        def transliterate_to_devanagari(json_data):
-                            updated = {}
-                            for k, v in json_data.items():
-                                if k.startswith("s") and "paragraph1" in k:
-                                    prompt = f"""Transliterate this Hindi sentence (written in Latin script) into Hindi Devanagari script. Return only the transliterated text:\n\n{v}"""
-                                    response = client.chat.completions.create(
-                                        model="gpt-4",
-                                        messages=[
-                                            {"role": "system", "content": "You are a Hindi transliteration expert."},
-                                            {"role": "user", "content": prompt}
-                                        ]
-                                    )
-                                    updated[k] = response.choices[0].message.content.strip()
-                                else:
-                                    updated[k] = v
-                            return updated
-
                         structured_output = transliterate_to_devanagari(structured_output)
 
-                    # ✅ Save & Download
+                    # Step 9: Save + Download JSON
                     timestamp = int(time.time())
                     filename = f"structured_slides_{timestamp}.json"
 
@@ -591,13 +605,11 @@ with tab1:
                             file_name=filename,
                             mime="application/json"
                         )
+
                 except Exception as e:
                     st.error(f"❌ Error: {str(e)}")
         else:
             st.warning("Please enter a valid URL and choose a persona.")
-
-
-
 
 with tab2:
     st.title("🎙️ GPT-4o Text-to-Speech to S3")
