@@ -675,7 +675,7 @@ def generate_storytitle(title, summary, content_language="English"):
 # === Streamlit UI ===
 st.title("🧠 Web Story Content Generator")
 
-tab1, tab2, tab3 ,tab4 ,tab5 ,tab6  = st.tabs(["📝 Slide Prompt Generator", "🔊 TTS Audio Generator", "Stoytitle/Hookline Insertor","🎞️ AMP Generator","Generate JSON", "Storyboard" ])
+tab1, tab2, tab3 ,tab4 ,tab5 ,tab6 ,tab7 = st.tabs(["📝 Slide Prompt Generator", "🔊 TTS Audio Generator", "Stoytitle/Hookline Insertor","🎞️ AMP Generator","Generate JSON", "Storyboard","🔄 Transform JSON"])
 
 # 🧠 Streamlit UI – Tab 1
 with tab1:
@@ -1287,3 +1287,50 @@ if submit_button:
     except Exception as e:
         st.error(f"Error processing HTML: {e}")
 
+
+with tab7:
+    st.title("🔄 Tab 7: Convert Suvichaar JSON → Remotion Format")
+    uploaded = st.file_uploader("📥 Upload Suvichaar JSON", type=["json"])
+    if uploaded:
+        try:
+            data = json.load(uploaded)
+            transformed = {}
+
+            for slide_key, info in data.items():
+                # extract slide index
+                idx = int(slide_key.replace("slide", ""))
+
+                # pick the right text field
+                if "storytitle" in info:
+                    text = info["storytitle"]
+                elif "hookline" in info:
+                    text = info["hookline"]
+                else:
+                    # find the first paragraph key like s1paragraph1
+                    text = next(
+                        (v for k, v in info.items() if "paragraph" in k),
+                        ""
+                    )
+
+                audio = info.get("audio_url", "")
+
+                transformed[slide_key] = {
+                    f"s{idx}paragraph1": text,
+                    f"s{idx}audio1":    audio,
+                    f"s{idx}image1":    "https://media.suvichaar.org/upload/polaris/polariscover.png",
+                    f"s{idx}paragraph2":"Suvichaar"
+                }
+
+            st.success("✅ Transformation Complete")
+            st.json(transformed)
+
+            # offer download
+            st.download_button(
+                label="⬇️ Download Transformed JSON",
+                data=json.dumps(transformed, indent=2, ensure_ascii=False),
+                file_name="remotion_input.json",
+                mime="application/json"
+            )
+
+        except Exception as e:
+            st.error(f"❌ Failed to transform JSON: {e}")
