@@ -1228,90 +1228,101 @@ if submit_button:
 
 
 with tab6:
-    AWS_ACCESS_KEY = st.secrets["aws"]["AWS_ACCESS_KEY"]
-    AWS_SECRET_KEY = st.secrets["aws"]["AWS_SECRET_KEY"]
-    AWS_REGION = st.secrets["aws"]["AWS_REGION"]
-    AWS_BUCKET = st.secrets["aws"]["AWS_BUCKET"]
-    S3_PREFIX = st.secrets["aws"]["S3_PREFIX"]
-    CDN_BASE = st.secrets["aws"]["CDN_BASE"]
-    CDN_PREFIX_MEDIA = "https://media.suvichaar.org/"
-    
-    s3 = boto3.client(
-        "s3",
-        aws_access_key_id     = AWS_ACCESS_KEY,
-        aws_secret_access_key = AWS_SECRET_KEY,
-        region_name           = AWS_REGION,
-    )
-    
-    st.title("Cover Image Request")
-    uploaded = st.file_uploader("📥 Upload Suvichaar JSON", type=["json"])
-    if not uploaded:
-        st.info("Please upload a Suvichaar‑style JSON to begin.")
-        st.stop()
-    
-    try:
-        data = json.load(uploaded)
-        transformed = {}
-        for slide_key, info in data.items():
-            idx = int(slide_key.replace("slide", ""))
-            # pick the right text field
-            if "storytitle" in info:
-                text = info["storytitle"]
-            elif "hookline" in info:
-                text = info["hookline"]
-            else:
-                text = next((v for k, v in info.items() if "paragraph" in k), "")
-            audio = info.get("audio_url", "")
-    
-            transformed[slide_key] = {
-                f"s{idx}paragraph1": text,
-                f"s{idx}audio1":    audio,
-                f"s{idx}image1":    "https://media.suvichaar.org/upload/polaris/polariscover.png",
-                f"s{idx}paragraph2":"Suvichaar"
-            }
-    
-        st.success("✅ Transformation Complete")
-        st.json(transformed)
-    
-        # 1️⃣ Send to thumbnail API
+        # ── AWS CONFIG ────────────────────────────────────────────────────
+        AWS_ACCESS_KEY   = st.secrets["aws"]["AWS_ACCESS_KEY"]
+        AWS_SECRET_KEY   = st.secrets["aws"]["AWS_SECRET_KEY"]
+        AWS_REGION       = st.secrets["aws"]["AWS_REGION"]
+        AWS_BUCKET       = st.secrets["aws"]["AWS_BUCKET"]
+        S3_PREFIX        = st.secrets["aws"]["S3_PREFIX"]
+        CDN_BASE         = st.secrets["aws"]["CDN_BASE"]
+        CDN_PREFIX_MEDIA = "https://media.suvichaar.org/"
+        
+        # Initialize S3 client once
+        s3 = boto3.client(
+            "s3",
+            aws_access_key_id     = AWS_ACCESS_KEY,
+            aws_secret_access_key = AWS_SECRET_KEY,
+            region_name           = AWS_REGION,
+        )
+        
+        st.title("Cover Image Request")
+        
+        uploaded = st.file_uploader("📥 Upload Suvichaar JSON", type=["json"])
+        if not uploaded:
+            st.info("Please upload a Suvichaar‑style JSON to begin.")
+            st.stop()
+        
+        # Parse & transform
+        try:
+            data = json.load(uploaded)
+            transformed = {}
+            for slide_key, info in data.items():
+                idx = int(slide_key.replace("slide", ""))
+                if "storytitle" in info:
+                    text = info["storytitle"]
+                elif "hookline" in info:
+                    text = info["hookline"]
+                else:
+                    text = next((v for k, v in info.items() if "paragraph" in k), "")
+                audio = info.get("audio_url", "")
+        
+                transformed[slide_key] = {
+                    f"s{idx}paragraph1": text,
+                    f"s{idx}audio1":    audio,
+                    f"s{idx}image1":    "https://media.suvichaar.org/upload/polaris/polariscover.png",
+                    f"s{idx}paragraph2":"Suvichaar"
+                }
+        
+            st.success("✅ Transformation Complete")
+            st.json(transformed)
+        
+        except json.JSONDecodeError:
+            st.error("❌ Uploaded file is not valid JSON.")
+            st.stop()
+        except Exception as e:
+            st.error(f"❌ Error during transformation: {e}")
+            st.stop()
+        
+        # Generate thumbnail
         if st.button("Generate Thumbnail"):
             with st.spinner("Generating…"):
-                resp = requests.post(
-                    "https://remotion.suvichaar.org/api/generate-news-thumbnail",
-                    json=transformed,
-                    timeout=30
-                )
-            if not resp.ok:
-                st.error(f"Thumbnail API error: {resp.status_code}")
-                st.stop()
-    
+                try:
+                    resp = requests.post(
+                        "https://remotion.suvichaar.org/api/generate-news-thumbnail",
+                        json=transformed,
+                        timeout=30
+                    )
+                    resp.raise_for_status()
+                except requests.RequestException as err:
+                    st.error(f"Thumbnail API error: {err}")
+                    st.stop()
+        
             img_bytes = resp.content
-    
-            # 2️⃣ Upload to S3
             ts = datetime.now().strftime("%Y%m%d_%H%M%S")
             key = f"{S3_PREFIX}cover_{ts}.png"
-            s3.put_object(
-                Bucket=AWS_BUCKET,
-                Key=key,
-                Body=img_bytes,
-                ContentType=resp.headers.get("Content-Type", "image/png"),
-                ACL="public-read",
-            )
-            cdn_url = CDN_BASE + key
-    
-            # 3️⃣ Show result
-            st.success("🖼️ Uploaded to S3!")
-            st.write(f"**CDN URL:** {cdn_url}")
+        
+            # Upload without ACL
+            try:
+                s3.put_object(
+                    Bucket      = AWS_BUCKET,
+                    Key         = key,
+                    Body        = img_bytes,
+                    ContentType = resp.headers.get("Content-Type", "image/png"),
+                )
+            except Exception as s3_err:
+                st.error(f"S3 upload failed: {s3_err}")
+                st.stop()
+        
+            cdn_url = f"{CDN_PREFIX_MEDIA}{key}"
+            st.success("🖼️ Thumbnail generated and uploaded!")
+            st.markdown(f"[View on CDN]({cdn_url})")
             st.image(cdn_url, use_column_width=True)
-    
-            # 4️⃣ Offer JSON download if you still want it
+        
+            # Offer JSON download
             st.download_button(
                 label="⬇️ Download Transformed JSON",
                 data=json.dumps(transformed, indent=2, ensure_ascii=False),
                 file_name=f"CoverJSON_{ts}.json",
                 mime="application/json"
             )
-    
-    except Exception as e:
-        st.error(f"❌ Failed to process: {e}")
-       
+        
