@@ -1228,7 +1228,7 @@ if submit_button:
 
 
 with tab6:
-    st.title("🔄 Tab 7: Convert Suvichaar JSON → Remotion Format")
+    st.title("Cover Image Request")
     uploaded = st.file_uploader("📥 Upload Suvichaar JSON", type=["json"])
     if uploaded:
         try:
