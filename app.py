@@ -5,6 +5,7 @@ import uuid
 import requests
 import boto3
 import nltk
+import datetime
 from dotenv import load_dotenv
 from openai import AzureOpenAI
 from pathlib import Path
