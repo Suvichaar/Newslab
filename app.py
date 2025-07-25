@@ -1085,7 +1085,7 @@ if submit_button:
                 unique_filename = f"{uuid.uuid4().hex}{ext}"
                 s3_key = f"{s3_prefix}{unique_filename}"
                 s3_client.put_object(
-                    Bucket=bucket_name,
+                    Bucket=AWS_BUCKET,
                     Key=s3_key,
                     Body=response.content,
                     ContentType=response.headers.get("Content-Type", "image/jpeg"),
@@ -1153,7 +1153,7 @@ if submit_button:
 
             for label, (width, height) in resize_presets.items():
                 template = {
-                    "bucket": bucket_name,
+                    "bucket":AWS_BUCKET,
                     "key": cdn_key_path,
                     "edits": {
                         "resize": {
