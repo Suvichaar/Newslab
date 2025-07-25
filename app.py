@@ -1228,13 +1228,6 @@ if submit_button:
 
 
 with tab6:
-    AWS_ACCESS_KEY = "AKIA5V6I6I6W6EKCFORCFH"
-    AWS_SECRET_KEY = "S7EjzjI3TKBrKP8keqR+wbIEFJA94eDg8tvMxx7Xs"
-    AWS_REGION     = "ap-south-1"
-    AWS_BUCKET     = "suvichaarapp"
-    S3_PREFIX      = "media/"
-    CDN_BASE       = "https://cdn.suvichaar.org/"
-    
     # Setup S3 client
     s3 = boto3.client(
         "s3",
