@@ -820,7 +820,7 @@ if uploaded_file:
 
         if st.button("🎯 Generate Final HTML + Trimmed JSON (ZIP)"):
             # generate timestamp
-            ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            ts = datetime.now().strftime("%Y%m%d_%H%M%S")
             zip_filename = f"Output_bundle_{ts}.zip"
 
             buffer = io.BytesIO()
