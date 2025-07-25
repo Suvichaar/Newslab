@@ -1228,12 +1228,19 @@ if submit_button:
 
 
 with tab6:
-    # Setup S3 client
+    AWS_ACCESS_KEY = st.secrets["aws"]["AWS_ACCESS_KEY"]
+    AWS_SECRET_KEY = st.secrets["aws"]["AWS_SECRET_KEY"]
+    AWS_REGION = st.secrets["aws"]["AWS_REGION"]
+    AWS_BUCKET = st.secrets["aws"]["AWS_BUCKET"]
+    S3_PREFIX = st.secrets["aws"]["S3_PREFIX"]
+    CDN_BASE = st.secrets["aws"]["CDN_BASE"]
+    CDN_PREFIX_MEDIA = "https://media.suvichaar.org/"
+    
     s3 = boto3.client(
         "s3",
-        aws_access_key_id=AWS_ACCESS_KEY,
-        aws_secret_access_key=AWS_SECRET_KEY,
-        region_name=AWS_REGION,
+        aws_access_key_id     = AWS_ACCESS_KEY,
+        aws_secret_access_key = AWS_SECRET_KEY,
+        region_name           = AWS_REGION,
     )
     
     st.title("Cover Image Request")
