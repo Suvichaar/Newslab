@@ -1164,7 +1164,7 @@ if submit_button:
                     }
                 }
                 encoded = base64.urlsafe_b64encode(json.dumps(template).encode()).decode()
-                final_url = f"{cdn_prefix_media}{encoded}"
+                final_url = f"{CDN_PREFIX_MEDIA}{encoded}"
                 # st.write(f"✅ Replacing {{{label}}} with {final_url}")
                 html_template = html_template.replace(f"{{{label}}}", final_url)
 
