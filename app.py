@@ -809,7 +809,7 @@ if uploaded_file:
     st.success("✅ JSON Loaded")
 
     try:
-        with open("templates/test.html", "r", encoding="utf-8") as f:
+        with open("test.html", "r", encoding="utf-8") as f:
             html_template = f.read()
     except FileNotFoundError:
         st.error("❌ Could not find `templates/test.html`. Please make sure it exists.")
