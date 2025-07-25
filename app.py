@@ -911,7 +911,7 @@ with tab4:
 
                     if para_key in data and audio_key in data:
                         raw = data[para_key].replace("’", "'").replace('"', '&quot;')
-                        paragraph = textwrap.shorten(raw, width=120, placeholder=" [...]")
+                        paragraph = textwrap.shorten(raw, width=180, placeholder="...")
                         audio_url = data[audio_key]
                         all_slides += generate_slide(paragraph, audio_url)
 
