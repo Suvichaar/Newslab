@@ -1262,12 +1262,12 @@ with tab6:
 
             st.success("✅ Transformation Complete")
             st.json(transformed)
-
+            ts = datetime.now().strftime("%Y%m%d_%H%M%S")
             # offer download
             st.download_button(
                 label="⬇️ Download Transformed JSON",
                 data=json.dumps(transformed, indent=2, ensure_ascii=False),
-                file_name="remotion_input.json",
+                file_name=f"Coverimage_{ts}.json",
                 mime="application/json"
             )
 
