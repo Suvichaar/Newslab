@@ -45,7 +45,7 @@ AWS_ACCESS_KEY = st.secrets["aws"]["AWS_ACCESS_KEY"]
 AWS_SECRET_KEY = st.secrets["aws"]["AWS_SECRET_KEY"]
 AWS_REGION = st.secrets["aws"]["AWS_REGION"]
 AWS_BUCKET = st.secrets["aws"]["AWS_BUCKET"]
-S3_PREFIX = st.secrets["aws"]["S3_PREFIX"]
+S3_PREFIX = "media/"
 CDN_BASE = st.secrets["aws"]["CDN_BASE"]
 CDN_PREFIX_MEDIA = "https://media.suvichaar.org/"
 
