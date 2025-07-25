@@ -1228,6 +1228,13 @@ if submit_button:
 
 
 with tab6:
+    AWS_ACCESS_KEY = "AKIA5V6I6I6W6EKCFORCFH"
+    AWS_SECRET_KEY = "S7EjzjI3TKBrKP8keqR+wbIEFJA94eDg8tvMxx7Xs"
+    AWS_REGION     = "ap-south-1"
+    AWS_BUCKET     = "suvichaar-image-upload"
+    S3_PREFIX      = "media/"
+    CDN_BASE       = "https://cdn.suvichaar.org/"
+    
     # Setup S3 client
     s3 = boto3.client(
         "s3",
@@ -1235,7 +1242,7 @@ with tab6:
         aws_secret_access_key=AWS_SECRET_KEY,
         region_name=AWS_REGION,
     )
-
+    
     st.title("Cover Image Request")
     uploaded = st.file_uploader("📥 Upload Suvichaar JSON", type=["json"])
     if not uploaded:
@@ -1307,3 +1314,4 @@ with tab6:
     
     except Exception as e:
         st.error(f"❌ Failed to process: {e}")
+       
