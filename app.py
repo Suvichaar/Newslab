@@ -21,7 +21,7 @@ import zipfile
 import os, uuid, json, random, string, base64, re, time
 from io import BytesIO
 from datetime import datetime, timezone
-
+import textwrap
 # Load environment variables
 load_dotenv()
 
@@ -910,7 +910,8 @@ with tab4:
                     audio_key = f"audio_url{slide_num}"
 
                     if para_key in data and audio_key in data:
-                        paragraph = data[para_key].replace("’", "'").replace('"', '&quot;')
+                        raw = data[para_key].replace("’", "'").replace('"', '&quot;')
+                        paragraph = textwrap.shorten(raw, width=120, placeholder=" [...]")
                         audio_url = data[audio_key]
                         all_slides += generate_slide(paragraph, audio_url)
 
