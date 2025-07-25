@@ -675,7 +675,7 @@ def generate_storytitle(title, summary, content_language="English"):
 # === Streamlit UI ===
 st.title("🧠 Web Story Content Generator")
 
-tab1, tab2, tab3 ,tab4 ,tab5 ,tab6 ,tab7 = st.tabs(["📝 Slide Prompt Generator", "🔊 TTS Audio Generator", "Stoytitle/Hookline Insertor","🎞️ AMP Generator","Generate JSON", "Storyboard","🔄 Transform JSON"])
+tab1, tab2, tab3 ,tab4 ,tab5 ,tab6 , = st.tabs(["Step:1", "Step:2", "Step:3","Step:4","Step:5","Step:6"])
 
 # 🧠 Streamlit UI – Tab 1
 with tab1:
@@ -922,74 +922,7 @@ with tab4:
         except Exception as e:
             st.error(f"⚠️ Error: {str(e)}")
 
-
 with tab5:
-    st.header("📥 Tab 5: Upload Suvichaar JSON → Renumber & Append Hookline")
-
-    uploaded_file = st.file_uploader("Upload Suvichaar JSON file", type="json")
-
-    if uploaded_file is not None:
-        data = json.load(uploaded_file)
-
-        # ── grab hookline & its audio ────────────────────────────────────────────
-        hookline       = data.get("slide2", {}).get("hookline", "")
-        hookline_audio = data.get("slide2", {}).get("audio_url", "")
-
-        # ── collect paragraph+audio slides from slide3, slide4 … until break ────
-        paragraph_slides = []
-        new_idx = 1
-        for i in range(3, 100):                          # covers slide3-slide99
-            old_key = f"slide{i}"
-            if old_key not in data:
-                break                                    # stop at first missing
-            slide_dict = data[old_key]
-
-            # find the “sxparagraph1” key
-            p_key = next((k for k in slide_dict if k.startswith("s") and "paragraph1" in k), None)
-            if p_key and "audio_url" in slide_dict:
-                paragraph_slides.append(
-                    (
-                        f"slide{new_idx}",
-                        {
-                            f"s{new_idx}paragraph1": slide_dict[p_key],
-                            f"s{new_idx}audio1":     slide_dict["audio_url"],
-                            f"s{new_idx}image1":    "https://media.suvichaar.org/upload/polaris/polariscover.png",
-                            f"s{new_idx}paragraph2":"Suvichaar"
-                        }
-                    )
-                )
-                new_idx += 1
-
-        # how many paragraph-audio blocks?
-        st.success(f"✅ Found {len(paragraph_slides)} paragraph-audio blocks")
-
-        # ── append the hookline as the final slide ──────────────────────────────
-        hook_idx = new_idx
-        hookline_slide = {
-            f"s{hook_idx}paragraph1": hookline,
-            f"s{hook_idx}audio1":     hookline_audio,
-            f"s{hook_idx}image1":    "https://media.suvichaar.org/upload/polaris/polariscover.png",
-            f"s{hook_idx}paragraph2":"Suvichaar"
-        }
-
-        # ── build the output JSON ───────────────────────────────────────────────
-        output_data = dict(paragraph_slides)
-        output_data[f"slide{hook_idx}"] = hookline_slide
-
-        # ── preview + download ──────────────────────────────────────────────────
-        st.subheader("✅ Final JSON Preview")
-        st.json(output_data)
-
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        file_name = f"remotion_{timestamp}.json"
-        st.download_button(
-            "📤 Download Final JSON",
-            data=json.dumps(output_data, indent=4),
-            file_name=file_name,
-            mime="application/json"
-        )
-
-with tab6:
     st.header("Content Submission Form")
 
     if "last_title" not in st.session_state:
@@ -1288,7 +1221,7 @@ if submit_button:
         st.error(f"Error processing HTML: {e}")
 
 
-with tab7:
+with tab6:
     st.title("🔄 Tab 7: Convert Suvichaar JSON → Remotion Format")
     uploaded = st.file_uploader("📥 Upload Suvichaar JSON", type=["json"])
     if uploaded:
