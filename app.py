@@ -800,36 +800,41 @@ with tab2:
                     
 with tab3:
 
-    st.title("🧩 Tab 4: Inject Hookline & Title + Trim JSON")
+    st.title("🧩Saving modified file")
 
     uploaded_file = st.file_uploader("📤 Upload Full Slide JSON (with slide1 to slide8)", type=["json"])
 
-    if uploaded_file:
-        json_data = json.load(uploaded_file)
-        st.success("✅ JSON Loaded")
+if uploaded_file:
+    json_data = json.load(uploaded_file)
+    st.success("✅ JSON Loaded")
 
-        try:
-            with open("test.html", "r", encoding="utf-8") as f:
-                html_template = f.read()
-        except FileNotFoundError:
-            st.error("❌ Could not find `templates/test.html`. Please make sure it exists.")
-        else:
-            updated_html = replace_placeholders_in_html(html_template, json_data)
-            updated_json = modify_tab4_json(json_data)
+    try:
+        with open("templates/test.html", "r", encoding="utf-8") as f:
+            html_template = f.read()
+    except FileNotFoundError:
+        st.error("❌ Could not find `templates/test.html`. Please make sure it exists.")
+    else:
+        updated_html = replace_placeholders_in_html(html_template, json_data)
+        updated_json = modify_tab4_json(json_data)
 
-            if st.button("🎯 Generate Final HTML + Trimmed JSON (ZIP)"):
-                buffer = io.BytesIO()
-                with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zipf:
-                    zipf.writestr("updated_test.html", updated_html)
-                    zipf.writestr("output.json", json.dumps(updated_json, indent=2, ensure_ascii=False))
-                buffer.seek(0)
+        if st.button("🎯 Generate Final HTML + Trimmed JSON (ZIP)"):
+            # generate timestamp
+            ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            zip_filename = f"Output_bundle_{ts}.zip"
 
-                st.download_button(
-                    label="⬇️ Download ZIP with HTML + JSON",
-                    data=buffer,
-                    file_name="tab4_output_bundle.zip",
-                    mime="application/zip"
-                )
+            buffer = io.BytesIO()
+            with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zipf:
+                # you can also include the timestamp in the internal filenames if desired:
+                zipf.writestr(f"updated_test_{ts}.html", updated_html)
+                zipf.writestr(f"output_{ts}.json", json.dumps(updated_json, indent=2, ensure_ascii=False))
+            buffer.seek(0)
+
+            st.download_button(
+                label="⬇️ Download ZIP with HTML + JSON",
+                data=buffer,
+                file_name=zip_filename,
+                mime="application/zip"
+            )
 
 with tab4:
     #
