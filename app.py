@@ -35,7 +35,7 @@ except LookupError:
 client = AzureOpenAI(
     azure_endpoint= st.secrets["azure_api"]["AZURE_OPENAI_ENDPOINT"],
     api_key= st.secrets["azure_api"]["AZURE_OPENAI_API_KEY"],
-    api_version="2024-02-01"
+    api_version="2025-01-01-preview"
 )
 
 AZURE_TTS_URL = st.secrets["azure"]["AZURE_TTS_URL"]
@@ -174,7 +174,7 @@ Return ONLY as JSON:
 
     try:
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-5-chat",
             messages=[
                 {"role": "system", "content": "Classify the news into category, subcategory, and emotion."},
                 {"role": "user", "content": prompt.strip()}
@@ -240,7 +240,7 @@ Article:
 """
 
     response = client.chat.completions.create(
-        model="gpt-4",
+        model="gpt-5-chat",
         messages=[
             {"role": "system", "content": system_prompt.strip()},
             {"role": "user", "content": user_prompt.strip()}
@@ -264,7 +264,7 @@ Article:
         slide1_prompt = f"Generate a greeting and headline intro narration in English for: {headline}"
 
     slide1_response = client.chat.completions.create(
-        model="gpt-4",
+        model="gpt-5-chat",
         messages=[
             {"role": "system", "content": "You are a news presenter generating opening lines."},
             {"role": "user", "content": slide1_prompt}
@@ -295,7 +295,7 @@ Character sketch:
 
         try:
             narration_response = client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-5-chat",
                 messages=[
                     {"role": "system", "content": "You write concise narrations for web story slides."},
                     {"role": "user", "content": narration_prompt.strip()}
@@ -409,7 +409,7 @@ Now generate the hookline in Polaris' tone:
 
     try:
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-5-chat",
             messages=[
                 {"role": "system", "content": "You create viral hooklines for news stories."},
                 {"role": "user", "content": prompt.strip()}
@@ -623,7 +623,7 @@ def transliterate_to_devanagari(json_data):
             
             try:
                 response = client.chat.completions.create(
-                    model="gpt-4",
+                    model="gpt-5-chat",
                     messages=[
                         {"role": "system", "content": "You are a Hindi transliteration expert."},
                         {"role": "user", "content": prompt.strip()}
@@ -660,7 +660,7 @@ def generate_storytitle(title, summary, content_language="English"):
 
     try:
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-5-chat",
             messages=[
                 {"role": "system", "content": "You generate clear and catchy news headlines."},
                 {"role": "user", "content": prompt.strip()}
@@ -766,7 +766,7 @@ with tab1:
             st.warning("Please enter a valid URL and choose a persona.")
 
 with tab2:
-    st.title("🎙️ GPT-4o Text-to-Speech to S3")
+    st.title("🎙️ gpt-5-chato Text-to-Speech to S3")
     uploaded_file = st.file_uploader("Upload structured slide JSON", type=["json"])
     voice_label = st.selectbox("Choose Voice", list(voice_options.values()))
 
@@ -956,7 +956,7 @@ with tab5:
             
             try:
                 response = client.chat.completions.create(
-                    model="gpt-4",
+                    model="gpt-5-chat",
                     messages=messages,
                     max_tokens=300,
                     temperature=0.5,
